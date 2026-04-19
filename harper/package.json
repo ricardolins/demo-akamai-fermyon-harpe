@@ -1,0 +1,12 @@
+{
+  "name": "foodedge-harper",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "seed": "tsx seeds/seed.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  }
+}

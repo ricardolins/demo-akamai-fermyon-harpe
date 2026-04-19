@@ -1,0 +1,13 @@
+{
+  "schema": "foodedge",
+  "table": "users",
+  "attributes": [
+    { "attribute": "id", "type": "uuid" },
+    { "attribute": "name", "type": "string" },
+    { "attribute": "email", "type": "string" },
+    { "attribute": "location", "type": "object" },
+    { "attribute": "preferences", "type": "array" },
+    { "attribute": "order_history", "type": "array" },
+    { "attribute": "region", "type": "string" }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "name": "foodedge",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx --watch server.ts",
+    "seed": "cd harper && tsx seeds/seed.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.14",
+    "hono": "^4.3.0"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "schema": "foodedge",
+  "table": "restaurants",
+  "attributes": [
+    { "attribute": "id", "type": "uuid" },
+    { "attribute": "name", "type": "string" },
+    { "attribute": "cuisine", "type": "string" },
+    { "attribute": "rating", "type": "number" },
+    { "attribute": "delivery_time_min", "type": "number" },
+    { "attribute": "delivery_fee", "type": "number" },
+    { "attribute": "min_order", "type": "number" },
+    { "attribute": "location", "type": "object" },
+    { "attribute": "region", "type": "string" },
+    { "attribute": "active", "type": "boolean" },
+    { "attribute": "image_url", "type": "string" },
+    { "attribute": "tags", "type": "array" }
+  ]
+}

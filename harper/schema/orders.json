@@ -1,0 +1,15 @@
+{
+  "schema": "foodedge",
+  "table": "orders",
+  "attributes": [
+    { "attribute": "id", "type": "uuid" },
+    { "attribute": "user_id", "type": "string" },
+    { "attribute": "restaurant_id", "type": "string" },
+    { "attribute": "items", "type": "array" },
+    { "attribute": "status", "type": "string" },
+    { "attribute": "total", "type": "number" },
+    { "attribute": "delivery_address", "type": "object" },
+    { "attribute": "created_at", "type": "number" },
+    { "attribute": "estimated_delivery_at", "type": "number" }
+  ]
+}

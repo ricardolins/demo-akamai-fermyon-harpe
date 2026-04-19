@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FoodEdge</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1>FoodEdge</h1>
+    <span id="edge-region"></span>
+    <button id="geo-btn">📍 Usar localização</button>
+    <div id="user-selector">
+      <label>Usuário:</label>
+      <select id="user-select">
+        <option value="">— sem login —</option>
+        <option value="user-001">Ana (prefere burgers)</option>
+        <option value="user-002">Carlos (prefere sushi)</option>
+        <option value="user-003">Demo (sem histórico)</option>
+      </select>
+    </div>
+  </header>
+
+  <div id="metrics-panel">
+    <span>Menu: <strong id="metric-menu">—</strong>ms</span>
+    <span>Personalização: <strong id="metric-personalization">—</strong>ms</span>
+    <span>Geo: <strong id="metric-geo">—</strong>ms</span>
+  </div>
+
+  <main>
+    <div id="filters">
+      <button data-cuisine="" class="active">Todos</button>
+      <button data-cuisine="Hamburguers">Burgers</button>
+      <button data-cuisine="Pizza">Pizza</button>
+      <button data-cuisine="Japonesa">Japonesa</button>
+      <button data-cuisine="Brasileira">Brasileira</button>
+    </div>
+
+    <div id="restaurants-grid"></div>
+  </main>
+
+  <!-- Modal de pedido -->
+  <div id="order-modal" class="modal hidden">
+    <div class="modal-box">
+      <button id="modal-close">✕</button>
+      <h2 id="modal-restaurant-name"></h2>
+      <div id="modal-items"></div>
+      <div id="modal-footer">
+        <span id="modal-total">Total: R$ 0,00</span>
+        <button id="modal-order-btn">Fazer Pedido</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmação de pedido -->
+  <div id="confirm-modal" class="modal hidden">
+    <div class="modal-box confirm">
+      <div class="confirm-icon">✓</div>
+      <h2>Pedido confirmado!</h2>
+      <p id="confirm-id"></p>
+      <p id="confirm-time"></p>
+      <button id="confirm-close">Fechar</button>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

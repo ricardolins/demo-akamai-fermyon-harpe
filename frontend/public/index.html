@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FoodEdge</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1>FoodEdge</h1>
+    <span id="edge-region"></span>
+  </header>
+
+  <!-- Painel de métricas — visível durante a demo para mostrar latência -->
+  <div id="metrics-panel">
+    <span>Menu: <strong id="metric-menu">—</strong>ms</span>
+    <span>Personalização: <strong id="metric-personalization">—</strong>ms</span>
+    <span>Geo: <strong id="metric-geo">—</strong>ms</span>
+  </div>
+
+  <main>
+    <div id="filters">
+      <button data-cuisine="" class="active">Todos</button>
+      <button data-cuisine="Hamburguers">Burgers</button>
+      <button data-cuisine="Pizza">Pizza</button>
+      <button data-cuisine="Japonesa">Japonesa</button>
+      <button data-cuisine="Brasileira">Brasileira</button>
+    </div>
+
+    <div id="restaurants-grid"></div>
+  </main>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
