@@ -1,0 +1,29 @@
+spin_manifest_version = 2
+
+[application]
+authors = ["Ricardo Lins <ricardobarbosalins@hotmail.com>"]
+description = "FoodEdge — food delivery demo on the edge"
+name = "foodedge"
+version = "0.1.0"
+
+[variables]
+harper_url = { required = true }
+harper_user = { required = true }
+harper_pass = { required = true }
+
+[[trigger.http]]
+route = "/api/..."
+component = "foodedge"
+
+[component.foodedge]
+source = "dist/spin-app.wasm"
+allowed_outbound_hosts = [
+  "https://us-west4-a-1.lins-test.lins.harperfabric.com:9925"
+]
+[component.foodedge.variables]
+harper_url = "{{ harper_url }}"
+harper_user = "{{ harper_user }}"
+harper_pass = "{{ harper_pass }}"
+[component.foodedge.build]
+command = ["npm install", "npm run build"]
+watch = ["src/**/*.ts"]

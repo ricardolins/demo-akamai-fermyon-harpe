@@ -6,6 +6,35 @@ O FoodEdge demonstra um padrão de arquitetura onde a lógica de negócio é exe
 
 ---
 
+## Stack atual (produção)
+
+```
+Browser
+  │
+  ▼
+Akamai CDN (cache de assets e APIs)
+  │
+  ▼
+Akamai Functions — spin-app.wasm (WebAssembly)
+  ├── GET  /api/menu
+  ├── GET  /api/menu-items
+  ├── GET  /api/personalization
+  ├── GET  /api/geo
+  ├── POST /api/orders
+  └── GET  /api/orders/:id
+  │
+  ▼
+HarperDB Cloud (us-west4-a-1)
+  ├── foodedge.restaurants
+  ├── foodedge.menu_items
+  ├── foodedge.orders
+  └── foodedge.users
+```
+
+**URL do edge:** `https://ccb238be-09c1-4260-8e13-8acb59f504a7.fwf.app`
+
+---
+
 ## Camadas
 
 ### 1. Akamai CDN
@@ -18,102 +47,140 @@ O FoodEdge demonstra um padrão de arquitetura onde a lógica de negócio é exe
 
 **Regras de cache:**
 ```
-/static/*          → Cache: 7 dias
-/api/menu/*        → Cache: 5 minutos (varia por região)
-/api/restaurants/* → Cache: 2 minutos
-/api/orders/*      → Sem cache (dinâmico)
-/api/user/*        → Sem cache (personalizado)
+/static/*              → Cache: 7 dias
+/api/menu              → Cache: 5 minutos  (Cache-Control: public, max-age=300)
+/api/menu-items        → Cache: 2 minutos  (Cache-Control: public, max-age=120)
+/api/geo               → Cache: 2 minutos  (Cache-Control: public, max-age=120)
+/api/personalization   → Sem cache         (Cache-Control: private, no-store)
+/api/orders            → Sem cache         (dinâmico)
 ```
 
 ---
 
-### 2. Edge Functions (Fermyon/Spin)
+### 2. Akamai Functions (Spin / WebAssembly)
 
-**Responsabilidade:** Lógica de negócio executada na borda.
+**Responsabilidade:** Lógica de negócio compilada para WebAssembly, executada nos PoPs da Akamai.
 
-Cada função é um módulo independente compilado para WebAssembly:
+O app é um único componente WASM (`spin-app.wasm`) com roteamento interno via `itty-router`. Compilado com `spin build`, deployado com `spin aka deploy`.
 
-#### `menu`
-- Lista restaurantes disponíveis por geolocalização
-- Retorna cardápio com preços e disponibilidade
-- Lê do HarperDB local ao PoP
+#### `GET /api/menu`
+- Lista restaurantes por região e culinária
+- Resultado cacheável — CDN retém por 5 minutos
+- Cache hit: resposta sem chegar ao Harper
 
-#### `orders`
-- Cria novos pedidos
-- Consulta status de pedido existente
-- Escreve/lê do HarperDB em tempo real
+#### `GET /api/menu-items`
+- Lista itens do cardápio por restaurante
+- Cache hit: resposta sem chegar ao Harper
 
-#### `personalization`
-- Calcula recomendações baseadas em:
-  - Histórico de pedidos do usuário
-  - Popularidade regional (dados agregados no edge)
-  - Hora do dia e dia da semana
-- Sem round-trip ao datacenter central
+#### `GET /api/personalization`
+- Ranking personalizado por histórico e preferências do usuário
+- Algoritmo de score calculado no edge (sem ML externo)
+- Sempre dinâmico — não cacheável
 
-#### `geo`
-- Determina raio de entrega com base no IP/coordenadas
-- Filtra restaurantes dentro do raio
-- Estima tempo de entrega por zona
+#### `GET /api/geo`
+- Filtra restaurantes por raio usando fórmula Haversine
+- Estima tempo de entrega por distância
+- Processamento no edge — sem geocoding externo
+
+#### `POST /api/orders` / `GET /api/orders/:id`
+- Criação e consulta de pedidos em tempo real
+- Escreve e lê do Harper diretamente
 
 ---
 
-### 3. HarperDB
+### 3. HarperDB Cloud
 
-**Responsabilidade:** Armazenamento operacional rápido e distribuído.
+**Responsabilidade:** Armazenamento operacional rápido.
 
 **Schemas:**
 
 ```
-restaurants
-  id, name, cuisine, rating, delivery_time_min,
-  location { lat, lon }, active, region
+restaurants   id, name, cuisine, rating, delivery_time_min,
+              location { lat, lon }, active, region, tags
 
-menu_items
-  id, restaurant_id, name, description, price,
-  category, available, image_url
+menu_items    id, restaurant_id, name, description, price,
+              category, available
 
-orders
-  id, user_id, restaurant_id, items[], status,
-  total, created_at, estimated_delivery_at
+orders        id, user_id, restaurant_id, items[], status,
+              total, created_at, estimated_delivery_at
 
-users
-  id, name, email, location { lat, lon },
-  preferences [], order_history []
+users         id, name, email, location { lat, lon },
+              preferences[], order_history[]
 ```
-
-**Padrão de acesso:**
-- Leituras: direto do PoP mais próximo (< 5ms)
-- Escritas de pedidos: replicadas para garantir consistência
-- Dados de menu: atualizados do restaurante, replicados nos PoPs
 
 ---
 
-## Fluxo de Dados
+## Latência medida (produção)
 
-### Carregar menu (caminho cacheável)
+Medições reais na Akamai Functions (`fwf.app`) a partir do Brasil.
+
+| Operação | Cold start | Warm (2ª req+) | Motivo |
+|---|---|---|---|
+| Menu (cache miss) | ~900ms | **~100ms** | CDN cacheia após 1ª req |
+| Menu (cache hit) | — | **< 20ms** | Resposta do PoP, sem Harper |
+| Personalização | ~1.2s | **~800ms** | Sempre vai ao Harper (2 queries) |
+| Geo | ~900ms | **~100ms** | CDN cacheia por 2 min |
+| Criar pedido | ~900ms | **~200ms** | Write no Harper, sem cache |
+
+---
+
+## Por que personalização é mais lenta
+
+A personalização faz **duas chamadas paralelas ao Harper** em cada requisição:
+1. `SELECT * FROM restaurants WHERE region = ?`
+2. `SELECT * FROM users WHERE id = ?`
+
+Não pode ser cacheada porque o resultado é específico por usuário (`private, no-store`).
+
+**Estado atual da demo:** Harper está em `us-west4` (Califórnia). A Akamai Function está num PoP distante desse endpoint, gerando ~800ms de round trip.
+
+**Caminho para < 50ms na personalização:**
 
 ```
-Browser → Akamai CDN → [cache hit] → resposta imediata
-                     → [cache miss] → Edge Function menu
-                                         → HarperDB (local)
-                                         → resposta + cache
+Hoje:
+  Akamai Function (PoP A) ──800ms──► Harper Cloud (us-west4)
+
+Ideal:
+  Akamai Function (PoP A) ──5ms──► Harper replicado no mesmo PoP
 ```
 
-### Criar pedido (caminho dinâmico)
+Isso exige **replicação do Harper entre regiões** — um nó Harper por PoP ou por região Akamai. O HarperDB suporta replicação nativa; bastaria configurar um nó em cada região onde a demo é apresentada.
+
+---
+
+## Fluxo de dados
+
+### Menu (cache hit — caminho feliz)
 
 ```
-Browser → Akamai CDN → Edge Function orders
-                           → HarperDB (write)
-                           → confirmação ao usuário
+Browser → Akamai CDN [cache HIT] → resposta em < 20ms
 ```
 
-### Personalização
+### Menu (cache miss — primeira carga)
 
 ```
-Browser → Akamai CDN → Edge Function personalization
-                           → HarperDB (user preferences)
-                           → algoritmo local no edge
-                           → lista personalizada
+Browser → Akamai CDN [miss] → Akamai Function
+                                  → Harper (SELECT restaurants)
+                                  → resposta + CDN armazena em cache
+                                     próximas requisições: < 20ms
+```
+
+### Personalização (sempre dinâmico)
+
+```
+Browser → Akamai CDN [no-store] → Akamai Function
+                                      → Harper (SELECT restaurants) ┐ paralelo
+                                      → Harper (SELECT user)        ┘
+                                      → ranking calculado no edge (JS)
+                                      → resposta personalizada
+```
+
+### Pedido
+
+```
+Browser → Akamai CDN → Akamai Function
+                           → Harper (INSERT order)
+                           → confirmação com ID e ETA
 ```
 
 ---
@@ -121,22 +188,9 @@ Browser → Akamai CDN → Edge Function personalization
 ## Princípios de design
 
 1. **Edge-first:** Toda lógica que pode rodar no edge, roda no edge
-2. **Cache agressivo:** Dados que mudam pouco são cacheados no CDN
-3. **Dados locais:** HarperDB co-localizado com as edge functions
-4. **Sem estado no frontend:** O frontend é apenas apresentação
-
----
-
-## Latência esperada
-
-| Operação | Latência alvo |
-|---|---|
-| Carregar página (cache) | < 20ms |
-| Listar restaurantes (cache) | < 50ms |
-| Listar restaurantes (miss) | < 150ms |
-| Recomendações personalizadas | < 100ms |
-| Criar pedido | < 200ms |
-| Status do pedido | < 80ms |
+2. **Cache agressivo:** Dados que mudam pouco são cacheados no CDN — menu, geo, itens
+3. **Sem estado no frontend:** O app é apresentação pura, sem lógica de negócio
+4. **Cache diferenciado:** Dados públicos (`public`) vs dados de usuário (`private, no-store`)
 
 ---
 
@@ -144,8 +198,20 @@ Browser → Akamai CDN → Edge Function personalization
 
 | | Backend Central | Edge (esta demo) |
 |---|---|---|
-| Latência média | 300–600ms | 50–150ms |
+| Menu latência | 300–600ms | **< 20ms** (cache hit) |
+| Personalização latência | 400–800ms | ~800ms (Harper distante) |
+| Personalização c/ Harper local | — | **< 50ms** |
 | Single point of failure | Sim | Não |
-| Personalização regional | Difícil | Natural |
+| Escala automática | Manual | Automática (edge) |
 | Custo de infra | Alto | Menor (CDN já pago) |
-| Complexidade operacional | Maior | Menor |
+
+---
+
+## Roadmap técnico
+
+| Etapa | O que resolve | Impacto |
+|---|---|---|
+| Harper replicado por região | Personalização < 50ms | Alto |
+| Auth JWT no edge | Login sem backend centralizado | Médio |
+| Frontend deployado no CDN | Demo sem Vite local | Médio |
+| Akamai Property Manager rules | Cache granular por rota | Alto |
