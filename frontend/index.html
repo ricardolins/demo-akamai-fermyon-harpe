@@ -72,12 +72,11 @@
   </header>
 
   <!-- ============================================================
-       PAINEL DE MÉTRICAS — barra escura com latências em tempo real
-       Visível durante a demo para mostrar o impacto do cache do CDN.
-       Exemplo: "Menu: 12ms ⚡ cache" vs "Menu: 208ms → Harper"
-       O JavaScript atualiza os <strong> após cada chamada à API.
+       PAINEL DE MÉTRICAS — oculto por padrão
+       Para revelar: clique 3x no logo "FoodEdge" no header.
+       Útil durante demo técnica para mostrar latências em tempo real.
        ============================================================ -->
-  <div id="metrics-panel">
+  <div id="metrics-panel" class="hidden">
     <span>Menu: <strong id="metric-menu">—</strong>ms</span>
     <!-- metric-menu: atualizado por setMetric() em home.ts após GET /api/menu -->
     <span>Personalização: <strong id="metric-personalization">—</strong>ms</span>

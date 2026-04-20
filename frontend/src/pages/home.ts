@@ -121,6 +121,19 @@ export function initHome() {
 
   loadRestaurants(); // carregamento inicial
 
+  // Painel de métricas oculto — revela com 3 cliques no logo
+  let clickCount = 0;
+  let clickTimer: ReturnType<typeof setTimeout>;
+  document.querySelector("header h1")?.addEventListener("click", () => {
+    clickCount++;
+    clearTimeout(clickTimer);
+    clickTimer = setTimeout(() => { clickCount = 0; }, 600);
+    if (clickCount >= 3) {
+      document.getElementById("metrics-panel")?.classList.toggle("hidden");
+      clickCount = 0;
+    }
+  });
+
   // TROCA DE USUÁRIO
   // "change" dispara quando o valor do <select> muda
   select?.addEventListener("change", () => {
