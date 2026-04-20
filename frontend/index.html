@@ -1,69 +1,172 @@
 <!DOCTYPE html>
+<!-- DOCTYPE html informa ao browser que este é um documento HTML5 (padrão atual).
+     Sem isso, browsers antigos entram em "quirks mode" e renderizam diferente. -->
+
 <html lang="pt-BR">
+<!-- lang="pt-BR" informa ao browser e leitores de tela que o idioma é Português do Brasil.
+     Afeta corretor ortográfico, síntese de voz e SEO. -->
+
 <head>
+  <!-- HEAD contém metadados — informações SOBRE a página, não conteúdo visível. -->
+
   <meta charset="UTF-8" />
+  <!-- charset=UTF-8 define a codificação de caracteres.
+       UTF-8 suporta todos os idiomas, incluindo acentos e emojis do português.
+       Sem isso, "ã", "ç", "é" podem aparecer como caracteres estranhos. -->
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- viewport configura como a página é exibida em dispositivos móveis.
+       width=device-width → a largura da página iguala a largura da tela do dispositivo.
+       initial-scale=1.0 → sem zoom inicial.
+       Sem essa tag, celulares mostram a página como se fosse um desktop pequeno. -->
+
   <title>FoodEdge</title>
+  <!-- Texto exibido na aba do browser e nos resultados de busca. -->
+
   <link rel="stylesheet" href="/style.css" />
+  <!-- Carrega o arquivo CSS que define toda a aparência visual.
+       href="/style.css" → caminho absoluto a partir da raiz do servidor.
+       O Vite serve o diretório "public/" na raiz, então /style.css = public/style.css. -->
 </head>
+
 <body>
+  <!-- BODY contém todo o conteúdo visível da página. -->
+
+  <!-- ============================================================
+       HEADER — barra de navegação no topo
+       Contém: logo, indicador de região do edge, botão de geo, seletor de usuário
+       ============================================================ -->
   <header>
     <h1>FoodEdge</h1>
+    <!-- h1 = título principal. Só deve haver um por página (SEO + acessibilidade). -->
+
     <span id="edge-region"></span>
+    <!-- Badge que mostra de qual PoP (ponto de presença) da Akamai veio a resposta.
+         Começa vazio — o JavaScript preenche com o valor do header X-Edge-Region
+         após a primeira chamada à API. Exemplo: "sa-east-1" -->
+
     <button id="geo-btn">📍 Usar localização</button>
+    <!-- Botão que aciona a API de Geolocalização do browser (navigator.geolocation).
+         O JavaScript em home.ts adiciona o comportamento via addEventListener.
+         id="geo-btn" é a âncora que o JS usa para encontrar este elemento. -->
+
     <div id="user-selector">
+      <!-- Contêiner do seletor de usuário. div é um elemento genérico de bloco sem semântica. -->
       <label>Usuário:</label>
+      <!-- label melhora acessibilidade: descreve o campo de formulário ao lado. -->
+
       <select id="user-select">
+        <!-- select cria um menu dropdown. O JS monitora o evento "change" neste elemento.
+             O valor selecionado é salvo no localStorage para persistir entre sessões.
+             Cada <option> tem um value que é enviado para a API como user_id. -->
         <option value="">— sem login —</option>
+        <!-- value="" → nenhum usuário selecionado → API retorna menu sem personalização -->
         <option value="user-001">Ana (prefere burgers)</option>
+        <!-- Ana tem preferences=["burger","grelhado"] e order_history no Harper -->
         <option value="user-002">Carlos (prefere sushi)</option>
+        <!-- Carlos tem preferences=["sushi","japonesa"] no Harper -->
         <option value="user-003">Demo (sem histórico)</option>
+        <!-- Usuário sem histórico — score baseado só em rating -->
       </select>
     </div>
   </header>
 
+  <!-- ============================================================
+       PAINEL DE MÉTRICAS — barra escura com latências em tempo real
+       Visível durante a demo para mostrar o impacto do cache do CDN.
+       Exemplo: "Menu: 12ms ⚡ cache" vs "Menu: 208ms → Harper"
+       O JavaScript atualiza os <strong> após cada chamada à API.
+       ============================================================ -->
   <div id="metrics-panel">
     <span>Menu: <strong id="metric-menu">—</strong>ms</span>
+    <!-- metric-menu: atualizado por setMetric() em home.ts após GET /api/menu -->
     <span>Personalização: <strong id="metric-personalization">—</strong>ms</span>
+    <!-- metric-personalization: atualizado após GET /api/personalization -->
     <span>Geo: <strong id="metric-geo">—</strong>ms</span>
+    <!-- metric-geo: atualizado após GET /api/geo (ao clicar no botão de localização) -->
   </div>
 
+  <!-- ============================================================
+       MAIN — conteúdo principal da página
+       ============================================================ -->
   <main>
+
+    <!-- FILTROS DE CULINÁRIA
+         Botões que filtram restaurantes por tipo de comida.
+         data-cuisine é um "data attribute" — atributo HTML customizado.
+         O JS lê btn.dataset.cuisine para saber qual filtro aplicar.
+         class="active" no primeiro botão = selecionado por padrão (CSS aplica cor vermelha). -->
     <div id="filters">
       <button data-cuisine="" class="active">Todos</button>
+      <!-- data-cuisine="" → sem filtro, busca todos -->
       <button data-cuisine="Hamburguers">Burgers</button>
       <button data-cuisine="Pizza">Pizza</button>
       <button data-cuisine="Japonesa">Japonesa</button>
       <button data-cuisine="Brasileira">Brasileira</button>
     </div>
 
+    <!-- GRID DE RESTAURANTES
+         Começa vazio — o JavaScript popula com cards gerados pela função renderCard() em home.ts.
+         O CSS usa display:grid com auto-fill para criar colunas responsivas automaticamente. -->
     <div id="restaurants-grid"></div>
+
   </main>
 
-  <!-- Modal de pedido -->
+  <!-- ============================================================
+       MODAL DE PEDIDO
+       Overlay que cobre a tela ao clicar em um restaurante.
+       Começa com class="hidden" → CSS aplica display:none → invisível.
+       O JS remove "hidden" para mostrar e adiciona de volta para fechar.
+       ============================================================ -->
   <div id="order-modal" class="modal hidden">
     <div class="modal-box">
+      <!-- Botão X para fechar — o JS adiciona onclick em orderModal.ts -->
       <button id="modal-close">✕</button>
+
+      <!-- Nome do restaurante clicado — preenchido pelo JS com restaurantName -->
       <h2 id="modal-restaurant-name"></h2>
+
+      <!-- Container onde o JS injeta os itens do cardápio (nome, preço, +/-) -->
       <div id="modal-items"></div>
+
+      <!-- Rodapé do modal com total e botão de confirmar -->
       <div id="modal-footer">
         <span id="modal-total">Total: R$ 0,00</span>
+        <!-- modal-total: atualizado em tempo real pela função updateTotal() -->
+
         <button id="modal-order-btn">Fazer Pedido</button>
+        <!-- Botão desabilitado por padrão (total = 0).
+             Habilitado quando pelo menos 1 item está no carrinho.
+             Ao clicar, faz POST /api/orders com o conteúdo do carrinho. -->
       </div>
     </div>
   </div>
 
-  <!-- Confirmação de pedido -->
+  <!-- ============================================================
+       MODAL DE CONFIRMAÇÃO
+       Exibido após o pedido ser criado com sucesso na API.
+       Mostra o número do pedido e o horário previsto de entrega.
+       ============================================================ -->
   <div id="confirm-modal" class="modal hidden">
     <div class="modal-box confirm">
+      <!-- Ícone verde de check — puro CSS, sem imagem -->
       <div class="confirm-icon">✓</div>
       <h2>Pedido confirmado!</h2>
+      <!-- confirm-id: preenchido com os primeiros 8 caracteres do UUID do pedido
+           Exemplo: "Pedido #550E8400" -->
       <p id="confirm-id"></p>
+      <!-- confirm-time: horário previsto + tempo de criação
+           Exemplo: "Entrega prevista às 19:45 · criado em 203ms" -->
       <p id="confirm-time"></p>
       <button id="confirm-close">Fechar</button>
     </div>
   </div>
 
+  <!-- SCRIPT DE ENTRADA
+       type="module" habilita ES Modules — permite usar import/export no browser.
+       O Vite intercepta este script durante o build e processa o TypeScript.
+       Em produção (após npm run build), este script é substituído pelo bundle
+       compilado em assets/ com hash no nome (ex: assets/main-Cd3k9aB.js). -->
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
