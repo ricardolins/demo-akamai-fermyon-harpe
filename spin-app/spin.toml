@@ -1,4 +1,13 @@
-spin_manifest_version = 2
+# ============================================================
+# SPIN.TOML — MANIFESTO DA APLICAÇÃO SPIN
+#
+# Este arquivo descreve como a Akamai Functions (plataforma Spin)
+# deve configurar e executar a aplicação.
+# É equivalente a um docker-compose.yml ou um serverless.yml,
+# mas para WebAssembly no edge.
+# ============================================================
+
+spin_manifest_version = 2  # versão do formato deste arquivo
 
 [application]
 authors = ["Ricardo Lins <ricardobarbosalins@hotmail.com>"]
@@ -6,32 +15,82 @@ description = "FoodEdge — food delivery demo on the edge"
 name = "foodedge"
 version = "0.1.0"
 
+# ============================================================
+# VARIÁVEIS DE AMBIENTE
+#
+# Declaradas aqui como "required = true" — o Spin não sobe sem elas.
+# São passadas no momento do deploy com --variable harper_url="..."
+# e ficam disponíveis no componente via [component.foodedge.variables].
+#
+# IMPORTANTE: neste projeto as credenciais são injetadas no bundle
+# pelo webpack DefinePlugin (não lidas em runtime pelo Spin SDK).
+# As variáveis aqui existem para compatibilidade com o protocolo
+# de deploy do "spin aka", mas o valor real vem do .env no build.
+# ============================================================
 [variables]
-harper_url = { required = true }
+harper_url  = { required = true }
 harper_user = { required = true }
 harper_pass = { required = true }
 
+# ============================================================
+# TRIGGER HTTP — ROTEAMENTO DE ENTRADA
+#
+# Define quais URLs são tratadas por qual componente.
+# A ordem importa: rotas mais específicas devem vir primeiro.
+# "/api/..." é mais específico que "/..." — a Akamai roteia /api/*
+# para o componente "foodedge" e todo o resto para "frontend".
+# ============================================================
+
+# Rota raiz: qualquer URL que não bata com /api/* vai para o fileserver
+# "..." é o wildcard do Spin (equivale ao "/*" do nginx)
 [[trigger.http]]
 route = "/..."
 component = "frontend"
 
+# Rota de API: URLs que começam com /api/ vão para o componente WASM
 [[trigger.http]]
 route = "/api/..."
 component = "foodedge"
 
+# ============================================================
+# COMPONENTE: foodedge (lógica de negócio em WebAssembly)
+# ============================================================
 [component.foodedge]
+# Caminho para o arquivo .wasm compilado pelo "npm run build"
 source = "dist/spin-app.wasm"
+
+# Lista de hosts externos que o componente pode contatar.
+# Por segurança, o Spin bloqueia qualquer fetch() para hosts não listados aqui.
+# Sem esta entrada, a conexão com o HarperDB seria recusada silenciosamente.
 allowed_outbound_hosts = [
   "https://us-west4-a-1.lins-test.lins.harperfabric.com:9925"
 ]
+
+# Variáveis passadas para o componente em runtime.
+# A sintaxe {{ harper_url }} lê o valor da seção [variables] acima.
 [component.foodedge.variables]
-harper_url = "{{ harper_url }}"
+harper_url  = "{{ harper_url }}"
 harper_user = "{{ harper_user }}"
 harper_pass = "{{ harper_pass }}"
+
+# Configuração de build local (usado pelo "spin build", não pelo "spin aka deploy")
+# command: comandos executados em sequência para gerar o .wasm
+# watch: arquivos monitorados pelo "spin watch" para rebuild automático
 [component.foodedge.build]
 command = ["npm install", "npm run build"]
 watch = ["src/**/*.ts"]
 
+# ============================================================
+# COMPONENTE: frontend (servidor de arquivos estáticos)
+# ============================================================
 [component.frontend]
+# spin_static_fs.wasm é um componente pré-compilado da Spin Foundation
+# que serve arquivos estáticos como um nginx/Apache básico.
+# Baixado de: github.com/spinframework/spin-fileserver/releases/v0.3.0
+# Usando arquivo local porque a URL do GitHub retornava 404 no "spin aka deploy".
 source = "spin_static_fs.wasm"
+
+# Mapeia o diretório local "frontend/dist" (build do Vite) para "/"
+# Quando alguém acessa "/", o fileserver serve "../frontend/dist/index.html"
+# Quando acessa "/assets/main.js", serve "../frontend/dist/assets/main.js"
 files = [{ source = "../frontend/dist", destination = "/" }]
