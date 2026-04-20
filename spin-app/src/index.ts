@@ -4,7 +4,22 @@ declare const __HARPER_URL__: string;
 declare const __HARPER_USER__: string;
 declare const __HARPER_PASS__: string;
 
-let router = AutoRouter();
+const ALLOWED_IPS = [
+  '177.181.2.218',
+  '2804:14d:783a:815a:f5fd:666c:7d67:b0ff',
+];
+
+let router = AutoRouter({
+  before: [(req): Response | undefined => {
+    const ip = req.headers.get('true-client-ip')
+      ?? req.headers.get('x-forwarded-for')?.split(',')[0].trim()
+      ?? '';
+    if (!ALLOWED_IPS.includes(ip)) {
+      return new Response('Forbidden', { status: 403 });
+    }
+    return undefined;
+  }],
+});
 
 function getHarperAuth(): { url: string; auth: string } {
   return {

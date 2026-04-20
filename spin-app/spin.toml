@@ -12,6 +12,10 @@ harper_user = { required = true }
 harper_pass = { required = true }
 
 [[trigger.http]]
+route = "/..."
+component = "frontend"
+
+[[trigger.http]]
 route = "/api/..."
 component = "foodedge"
 
@@ -27,3 +31,7 @@ harper_pass = "{{ harper_pass }}"
 [component.foodedge.build]
 command = ["npm install", "npm run build"]
 watch = ["src/**/*.ts"]
+
+[component.frontend]
+source = "spin_static_fs.wasm"
+files = [{ source = "../frontend/dist", destination = "/" }]

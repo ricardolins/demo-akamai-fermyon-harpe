@@ -3,4 +3,4 @@ dist
 target
 .spin/
 build/
-.spin-aka/
+.spin-aka/spin_static_fs.wasm

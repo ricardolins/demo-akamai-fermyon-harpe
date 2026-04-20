@@ -38,7 +38,7 @@ const config = async () => {
       new webpack.DefinePlugin({
         '__HARPER_URL__': JSON.stringify(process.env.HARPER_URL ?? env.HARPER_URL ?? ''),
         '__HARPER_USER__': JSON.stringify(process.env.HARPER_USER ?? env.HARPER_USER ?? ''),
-        '__HARPER_PASS__': JSON.stringify(process.env.HARPER_PASS ?? ''),
+        '__HARPER_PASS__': JSON.stringify(process.env.HARPER_PASS ?? env.HARPER_PASS ?? ''),
       }),
     ],
     optimization: { minimize: false },
