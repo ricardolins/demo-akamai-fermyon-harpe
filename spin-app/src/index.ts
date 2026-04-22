@@ -25,35 +25,7 @@ declare const __HARPER_PASS__: string;
 // Lista de IPs que têm permissão para acessar qualquer rota da API.
 // Qualquer requisição de outro IP recebe 403 Forbidden.
 // IPv4 (177.181.2.218) e IPv6 (2804:...) do mesmo usuário,
-// pois a Akamai pode usar qualquer um dependendo da rede.
-const ALLOWED_IPS = [
-  '177.181.2.218',
-  '2804:14d:783a:815a:f5fd:666c:7d67:b0ff',
-];
-
-// AutoRouter aceita um objeto de configuração com hooks "before" e "after".
-// O hook "before" é um array de funções que rodam ANTES de qualquer rota.
-// Se uma função do "before" retornar um Response, a requisição para aí —
-// as rotas definidas abaixo nem chegam a executar.
-let router = AutoRouter({
-  before: [(req): Response | undefined => {
-    // A Akamai injeta o IP real do cliente no header "true-client-ip".
-    // É mais confiável que x-forwarded-for, que pode ser forjado.
-    // O operador ?? encadeia fallbacks: tenta o primeiro, se for null/undefined tenta o próximo.
-    const ip = req.headers.get('true-client-ip')
-      ?? req.headers.get('x-forwarded-for')?.split(',')[0].trim()
-      ?? '';
-
-    // Se o IP não está na lista, bloqueia com 403.
-    // Retornar um Response aqui interrompe o pipeline — as rotas abaixo não rodam.
-    if (!ALLOWED_IPS.includes(ip)) {
-      return new Response('Forbidden', { status: 403 });
-    }
-
-    // Retornar undefined significa "pode continuar" — o router passa para a próxima etapa.
-    return undefined;
-  }],
-});
+let router = AutoRouter();
 
 // ============================================================
 // FUNÇÕES DE ACESSO AO HARPERDB
