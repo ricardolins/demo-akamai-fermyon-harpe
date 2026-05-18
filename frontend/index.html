@@ -161,6 +161,43 @@
     </div>
   </div>
 
+  <!-- ============================================================
+       CHAT DE SUPORTE — widget flutuante no canto inferior direito
+       ============================================================ -->
+
+  <!-- Botão flutuante que abre/fecha o painel do chat -->
+  <button id="chat-toggle" aria-label="Suporte">
+    💬
+  </button>
+
+  <!-- Painel do chat — oculto por padrão -->
+  <div id="chat-panel" class="hidden">
+    <div id="chat-header">
+      <div id="chat-header-info">
+        <span id="chat-avatar">🤖</span>
+        <div>
+          <strong>Suporte FoodEdge</strong>
+          <small>Assistente com IA · Akamai Cloud</small>
+        </div>
+      </div>
+      <button id="chat-close">✕</button>
+    </div>
+
+    <!-- Área de mensagens — populada dinamicamente pelo JS -->
+    <div id="chat-messages"></div>
+
+    <!-- Área de input -->
+    <div id="chat-footer">
+      <input
+        id="chat-input"
+        type="text"
+        placeholder="Digite sua dúvida..."
+        autocomplete="off"
+      />
+      <button id="chat-send">Enviar</button>
+    </div>
+  </div>
+
   <!-- SCRIPT DE ENTRADA
        type="module" habilita ES Modules — permite usar import/export no browser.
        O Vite intercepta este script durante o build e processa o TypeScript.
